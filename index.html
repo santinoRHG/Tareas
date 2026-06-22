@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tareas">
+<meta name="theme-color" content="#111318" id="theme-meta">
+<title>Tareas</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.10.0/dist/tabler-icons.min.css">
+<style>
+:root {
+  --bg: #111318; --bg2: #181c24; --surface: #1e2230; --surface2: #252a3a;
+  --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.13);
+  --text: #e8eaf2; --text2: #8b90a8; --text3: #4e5368;
+  --accent: #6c8ef5; --accent2: #4a6ce0; --accent-bg: rgba(108,142,245,0.12);
+  --high: #f56c6c; --high-bg: rgba(245,108,108,0.12);
+  --med: #f5a623; --med-bg: rgba(245,166,35,0.12);
+  --low: #6cc88e; --low-bg: rgba(108,200,142,0.12);
+  --done: #4e5368; --done-bg: rgba(78,83,104,0.12);
+  --pending: #6c8ef5; --pending-bg: rgba(108,142,245,0.1);
+  --inprog: #f5a623; --inprog-bg: rgba(245,166,35,0.1);
+  --blocked: #f56c6c; --blocked-bg: rgba(245,108,108,0.1);
+  --radius: 12px; --radius-sm: 7px; --radius-xs: 4px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+.light {
+  --bg: #f4f5f9; --bg2: #eceef4; --surface: #ffffff; --surface2: #f0f1f7;
+  --border: rgba(0,0,0,0.07); --border2: rgba(0,0,0,0.13);
+  --text: #1a1d2e; --text2: #5a6080; --text3: #9aa0bc;
+  --accent: #3a5cd4; --accent2: #2a4ab8; --accent-bg: rgba(58,92,212,0.08);
+  --high: #d63c3c; --high-bg: rgba(214,60,60,0.08);
+  --med: #c47d0a; --med-bg: rgba(196,125,10,0.08);
+  --low: #2a8a50; --low-bg: rgba(42,138,80,0.08);
+  --done: #9aa0bc; --done-bg: rgba(154,160,188,0.1);
+  --pending: #3a5cd4; --pending-bg: rgba(58,92,212,0.07);
+  --inprog: #c47d0a; --inprog-bg: rgba(196,125,10,0.07);
+  --blocked: #d63c3c; --blocked-bg: rgba(214,60,60,0.07);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif; overflow: hidden; }
+.app { display: flex; flex-direction: column; height: 100vh; height: -webkit-fill-available; }
+
+/* Header */
+.header { padding: calc(var(--safe-top) + 48px) 16px 0; background: var(--bg); border-bottom: 0.5px solid var(--border); flex-shrink: 0; }
+.header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.header-top h1 { font-size: 26px; font-weight: 800; color: var(--text); letter-spacing: -0.6px; }
+.header-actions { display: flex; gap: 8px; }
+.icon-btn { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); width: 32px; height: 32px; cursor: pointer; color: var(--text2); display: flex; align-items: center; justify-content: center; font-size: 16px; }
+
+/* Nav tabs */
+.nav-tabs { display: flex; overflow-x: auto; scrollbar-width: none; gap: 0; }
+.nav-tabs::-webkit-scrollbar { display: none; }
+.nav-tab { flex-shrink: 0; padding: 10px 14px; font-size: 13px; font-weight: 500; color: var(--text3); border: none; background: transparent; cursor: pointer; border-bottom: 2px solid transparent; font-family: inherit; white-space: nowrap; margin-bottom: -0.5px; transition: color .15s; }
+.nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* Sync bar */
+.sync-bar { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text3); padding: 4px 16px; background: var(--bg); border-bottom: 0.5px solid var(--border); flex-shrink: 0; }
+.sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); flex-shrink: 0; }
+.sync-dot.ok { background: var(--low); }
+.sync-dot.syncing { background: var(--med); animation: pulse 1s infinite; }
+.sync-dot.error { background: var(--high); }
+@keyframes pulse { 0%,100%{opacity:1;}50%{opacity:0.3;} }
+
+/* Content */
+.content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px 14px calc(var(--safe-bottom) + 80px); }
+
+/* Search bar */
+.search-wrap { position: relative; margin-bottom: 12px; }
+.search-wrap i { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 15px; pointer-events: none; }
+.search-input { width: 100%; background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 9px 12px 9px 34px; font-size: 14px; color: var(--text); font-family: inherit; outline: none; }
+.search-input::placeholder { color: var(--text3); }
+.search-input:focus { border-color: var(--accent); }
+
+/* Filter chips */
+.filter-row { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin-bottom: 14px; }
+.filter-row::-webkit-scrollbar { display: none; }
+.filter-chip { flex-shrink: 0; padding: 5px 11px; border-radius: 20px; font-size: 12px; font-weight: 500; border: 0.5px solid var(--border2); background: transparent; color: var(--text2); cursor: pointer; font-family: inherit; white-space: nowrap; transition: all .15s; }
+.filter-chip.active { background: var(--accent-bg); color: var(--accent); border-color: var(--accent); }
+
+/* Section */
+.section-head { font-size: 11px; font-weight: 700; color: var(--text3); margin: 16px 0 6px; text-transform: uppercase; letter-spacing: .07em; display: flex; align-items: center; justify-content: space-between; }
+.section-head:first-child { margin-top: 0; }
+.section-count { font-size: 11px; color: var(--text3); font-weight: 400; }
+
+/* Task card */
+.task-list { display: flex; flex-direction: column; gap: 6px; }
+.task-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 12px 14px; cursor: pointer; transition: border-color .15s; position: relative; }
+.task-card:active { opacity: 0.85; }
+.task-card.done-card { opacity: 0.55; }
+.task-card-top { display: flex; align-items: flex-start; gap: 10px; }
+.task-check { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--border2); background: transparent; flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-top: 1px; transition: all .15s; }
+.task-check.checked { background: var(--low); border-color: var(--low); }
+.task-check.checked::after { content: ''; width: 10px; height: 7px; border-left: 2px solid #fff; border-bottom: 2px solid #fff; transform: rotate(-45deg) translate(1px, -1px); display: block; }
+.task-body { flex: 1; min-width: 0; }
+.task-title { font-size: 14px; font-weight: 500; color: var(--text); line-height: 1.35; margin-bottom: 4px; }
+.task-card.done-card .task-title { text-decoration: line-through; color: var(--text3); }
+.task-meta { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.task-badge { font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 600; white-space: nowrap; }
+.badge-high { background: var(--high-bg); color: var(--high); }
+.badge-med { background: var(--med-bg); color: var(--med); }
+.badge-low { background: var(--low-bg); color: var(--low); }
+.badge-pending { background: var(--pending-bg); color: var(--pending); }
+.badge-inprog { background: var(--inprog-bg); color: var(--inprog); }
+.badge-done { background: var(--done-bg); color: var(--done); }
+.badge-blocked { background: var(--blocked-bg); color: var(--blocked); }
+.badge-project { background: var(--accent-bg); color: var(--accent); }
+.task-deadline { font-size: 11px; color: var(--text3); display: flex; align-items: center; gap: 3px; }
+.task-deadline.overdue { color: var(--high); }
+.task-deadline.soon { color: var(--med); }
+.task-notes-preview { font-size: 12px; color: var(--text3); margin-top: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-time { font-size: 11px; color: var(--text3); display: flex; align-items: center; gap: 3px; }
+
+/* Project section */
+.project-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; overflow: hidden; }
+.project-header { padding: 12px 14px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.project-header:active { opacity: 0.8; }
+.project-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.project-name { font-size: 15px; font-weight: 600; color: var(--text); flex: 1; }
+.project-stats { font-size: 12px; color: var(--text3); }
+.project-progress { height: 3px; background: var(--surface2); margin: 0 14px 12px; border-radius: 2px; overflow: hidden; }
+.project-progress-bar { height: 100%; border-radius: 2px; transition: width .3s; }
+.project-tasks { padding: 0 10px 10px; display: flex; flex-direction: column; gap: 5px; }
+.add-subtask-btn { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text3); background: transparent; border: 0.5px dashed var(--border2); border-radius: var(--radius-sm); padding: 8px 12px; cursor: pointer; font-family: inherit; width: 100%; margin-top: 4px; }
+
+/* Calendar */
+.cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.cal-nav button { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); width: 30px; height: 30px; cursor: pointer; color: var(--text2); display: flex; align-items: center; justify-content: center; }
+.cal-nav span { font-size: 14px; font-weight: 600; color: var(--text); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0,1fr)); gap: 3px; }
+.cal-day-label { font-size: 10px; color: var(--text3); text-align: center; padding: 3px 0 5px; font-weight: 600; }
+.cal-cell { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); min-height: 64px; padding: 5px 4px; cursor: pointer; }
+.cal-cell:active { opacity: 0.8; }
+.cal-cell.empty { background: transparent; border-color: transparent; cursor: default; }
+.cal-cell.today { border-color: var(--accent); }
+.cal-num { font-size: 10px; color: var(--text3); margin-bottom: 3px; }
+.cal-cell.today .cal-num { color: var(--accent); font-weight: 700; }
+.cal-task-dot { width: 100%; font-size: 9px; padding: 2px 3px; border-radius: 3px; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 2px; }
+
+/* FAB */
+.fab-wrap { position: fixed; bottom: calc(var(--safe-bottom) + 20px); right: 20px; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; z-index: 50; }
+.fab { width: 56px; height: 56px; border-radius: 50%; background: var(--accent); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #fff; box-shadow: 0 4px 20px rgba(108,142,245,0.4); transition: transform .15s; }
+.fab:active { transform: scale(0.94); }
+.fab-mic { width: 44px; height: 44px; border-radius: 50%; background: var(--surface); border: 0.5px solid var(--border2); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; color: var(--text2); box-shadow: 0 2px 12px rgba(0,0,0,0.2); }
+.fab-mic.recording { background: var(--high); color: #fff; animation: pulse-fab 1s infinite; }
+@keyframes pulse-fab { 0%,100%{box-shadow:0 2px 12px rgba(245,108,108,0.4);}50%{box-shadow:0 2px 24px rgba(245,108,108,0.7);} }
+
+/* Empty */
+.empty-state { text-align: center; padding: 48px 16px; color: var(--text3); font-size: 13px; line-height: 1.6; }
+.empty-state i { font-size: 36px; display: block; margin-bottom: 10px; }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: flex-end; z-index: 100; }
+.modal-overlay.hidden { display: none; }
+.modal { background: var(--surface); border-radius: 20px 20px 0 0; width: 100%; padding: 16px 16px calc(var(--safe-bottom) + 24px); max-height: 92vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.modal-handle { width: 36px; height: 4px; background: var(--border2); border-radius: 2px; margin: 0 auto 16px; }
+.modal h3 { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 16px; }
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 11px; color: var(--text3); margin-bottom: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.field input, .field select, .field textarea { width: 100%; background: var(--bg); border: 0.5px solid var(--border2); border-radius: var(--radius-sm); padding: 11px 12px; font-size: 15px; color: var(--text); font-family: inherit; outline: none; -webkit-appearance: none; }
+.field select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%234e5368' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); }
+.field textarea { height: 80px; resize: none; }
+.modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+.btn-save { flex: 1; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); padding: 14px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.btn-cancel { background: var(--surface2); color: var(--text2); border: none; border-radius: var(--radius); padding: 14px 16px; font-size: 15px; cursor: pointer; font-family: inherit; }
+.btn-delete { background: var(--high-bg); color: var(--high); border: none; border-radius: var(--radius); padding: 14px 16px; font-size: 15px; cursor: pointer; font-family: inherit; }
+.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* Today view specifics */
+.today-header { background: var(--accent-bg); border: 0.5px solid rgba(108,142,245,0.2); border-radius: var(--radius); padding: 14px; margin-bottom: 14px; }
+.today-date { font-size: 12px; color: var(--accent); font-weight: 600; margin-bottom: 2px; }
+.today-summary { font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: -0.4px; }
+.today-sub { font-size: 13px; color: var(--text2); margin-top: 2px; }
+
+/* Project color dots */
+.proj-color-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.proj-color-opt { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: border-color .15s; }
+.proj-color-opt.selected { border-color: var(--text); }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-top">
+      <h1 id="view-title">Hoy</h1>
+      <div class="header-actions">
+        <button class="icon-btn" id="search-toggle" aria-label="Buscar"><i class="ti ti-search"></i></button>
+        <button class="icon-btn" id="theme-toggle" aria-label="Tema"><i class="ti ti-sun" id="theme-icon"></i></button>
+      </div>
+    </div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" data-view="hoy">Hoy</button>
+      <button class="nav-tab" data-view="todas">Todas</button>
+      <button class="nav-tab" data-view="proyectos">Proyectos</button>
+      <button class="nav-tab" data-view="calendario">Calendario</button>
+    </div>
+  </div>
+  <div class="sync-bar">
+    <span class="sync-dot" id="sync-dot"></span>
+    <span id="sync-text">Cargando...</span>
+  </div>
+  <div class="content" id="content"></div>
+</div>
+
+<div class="fab-wrap">
+  <button class="fab-mic" id="fab-mic" aria-label="Agregar por voz"><i class="ti ti-microphone" id="mic-icon"></i></button>
+  <button class="fab" id="fab-add" aria-label="Nueva tarea"><i class="ti ti-plus"></i></button>
+</div>
+
+<div class="modal-overlay hidden" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/a/macros/theriverhousegroup.com/s/AKfycbx1uBGO_IRGImBO3l0K_miah_pkkZl22U6BOsf5DIxY26LAH2LnvvqTywg6pAconhqJ8Q/exec';
+
+const PROJECT_COLORS = ['#6c8ef5','#f56c6c','#f5a623','#6cc88e','#b57ef0','#5aabdf','#e8c55a','#e8835a'];
+const PRIORITIES = ['Alta','Media','Baja'];
+const STATUSES = ['Pendiente','En progreso','Bloqueada','Hecha'];
+const TIME_OPTS = ['15 min','30 min','1 hora','2 horas','Medio día','Todo el día'];
+const RECUR_OPTS = ['No','Cada día','Cada semana','Cada mes'];
+const DAYS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const MONTHS_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+let today = new Date();
+let calMonth = today.getMonth();
+let calYear = today.getFullYear();
+let currentView = 'hoy';
+let isLight = false;
+let searchOpen = false;
+let searchQuery = '';
+let filterStatus = 'all';
+let filterPriority = 'all';
+let tasks = [];
+let projects = [];
+let editingTaskId = null;
+let editingProjectId = null;
+let isRecording = false;
+let recognition = null;
+
+try { isLight = localStorage.getItem('rhg_tasks_theme') === 'light'; } catch(e) {}
+try { projects = JSON.parse(localStorage.getItem('rhg_projects') || '[]'); } catch(e) {}
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+function todayKey() { return dateKey(today.getFullYear(), today.getMonth(), today.getDate()); }
+function dateKey(y,m,d) { return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+
+function setSyncStatus(state, text) {
+  document.getElementById('sync-dot').className = 'sync-dot ' + state;
+  document.getElementById('sync-text').textContent = text;
+}
+
+function jsonp(url) {
+  return new Promise((resolve, reject) => {
+    const cb = '_cb_' + Date.now();
+    const script = document.createElement('script');
+    const timeout = setTimeout(() => { delete window[cb]; document.body.removeChild(script); reject(new Error('timeout')); }, 12000);
+    window[cb] = data => { clearTimeout(timeout); delete window[cb]; document.body.removeChild(script); resolve(data); };
+    script.src = url + '&callback=' + cb;
+    script.onerror = () => { clearTimeout(timeout); reject(new Error('error')); };
+    document.body.appendChild(script);
+  });
+}
+
+async function loadTasks() {
+  setSyncStatus('syncing', 'Sincronizando...');
+  try {
+    const data = await jsonp(`${SCRIPT_URL}?action=getTasks`);
+    tasks = Array.isArray(data) ? data.filter(t => t.id).map(t => ({...t, id: String(t.id)})) : [];
+    try { localStorage.setItem('rhg_tasks_cache', JSON.stringify(tasks)); } catch(e) {}
+    setSyncStatus('ok', 'Sincronizado');
+  } catch(e) {
+    try { const c = localStorage.getItem('rhg_tasks_cache'); if(c) tasks = JSON.parse(c); } catch(e2) {}
+    setSyncStatus('error', 'Sin conexión');
+  }
+  renderAll();
+}
+
+async function saveTaskRemote(task) {
+  setSyncStatus('syncing', 'Guardando...');
+  try {
+    await jsonp(`${SCRIPT_URL}?action=saveTask&task=${encodeURIComponent(JSON.stringify(task))}`);
+    setSyncStatus('ok', 'Guardado');
+  } catch(e) { setSyncStatus('error', 'Error al guardar'); }
+}
+
+async function deleteTaskRemote(id) {
+  setSyncStatus('syncing', 'Eliminando...');
+  try {
+    await jsonp(`${SCRIPT_URL}?action=deleteTask&id=${encodeURIComponent(id)}`);
+    setSyncStatus('ok', 'Eliminado');
+  } catch(e) { setSyncStatus('error', 'Error al eliminar'); }
+}
+
+function saveProjects() { try { localStorage.setItem('rhg_projects', JSON.stringify(projects)); } catch(e) {} }
+function applyTheme() {
+  document.body.classList.toggle('light', isLight);
+  document.getElementById('theme-icon').className = isLight ? 'ti ti-moon' : 'ti ti-sun';
+  document.getElementById('theme-meta').content = isLight ? '#f4f5f9' : '#111318';
+}
+
+function projectObj(id) { return projects.find(p => p.id === id); }
+function projectColor(id) { const p = projectObj(id); return p ? p.color : 'var(--accent)'; }
+
+function deadlineLabel(dl) {
+  if (!dl) return null;
+  const d = new Date(dl + 'T12:00');
+  const diff = Math.round((d - today) / (1000*60*60*24));
+  if (diff < 0) return { text: `Venció hace ${Math.abs(diff)}d`, cls: 'overdue' };
+  if (diff === 0) return { text: 'Vence hoy', cls: 'soon' };
+  if (diff === 1) return { text: 'Vence mañana', cls: 'soon' };
+  if (diff <= 3) return { text: `En ${diff} días`, cls: 'soon' };
+  return { text: d.toLocaleDateString('es-AR', {day:'numeric',month:'short'}), cls: '' };
+}
+
+function statusBadge(s) {
+  const map = { 'Pendiente':'badge-pending', 'En progreso':'badge-inprog', 'Hecha':'badge-done', 'Bloqueada':'badge-blocked' };
+  return `<span class="task-badge ${map[s]||'badge-pending'}">${s}</span>`;
+}
+function priorityBadge(p) {
+  const map = { 'Alta':'badge-high', 'Media':'badge-med', 'Baja':'badge-low' };
+  return `<span class="task-badge ${map[p]||'badge-low'}">${p||'Baja'}</span>`;
+}
+
+function taskCardHTML(task, showProject=true) {
+  const dl = deadlineLabel(task.deadline);
+  const isDone = task.status === 'Hecha';
+  const proj = projectObj(task.project);
+  return `<div class="task-card${isDone?' done-card':''}" onclick="openEditTask('${task.id}',event)">
+    <div class="task-card-top">
+      <div class="task-check${isDone?' checked':''}" onclick="toggleDone('${task.id}',event)"></div>
+      <div class="task-body">
+        <div class="task-title">${task.title}</div>
+        <div class="task-meta">
+          ${priorityBadge(task.priority)}
+          ${statusBadge(task.status)}
+          ${showProject && proj ? `<span class="task-badge badge-project" style="background:${proj.color}22;color:${proj.color}">${proj.name}</span>` : ''}
+          ${dl ? `<span class="task-deadline ${dl.cls}"><i class="ti ti-calendar-event" style="font-size:10px"></i>${dl.text}</span>` : ''}
+          ${task.estimatedTime ? `<span class="task-time"><i class="ti ti-clock" style="font-size:10px"></i>${task.estimatedTime}</span>` : ''}
+        </div>
+        ${task.notes ? `<div class="task-notes-preview">${task.notes}</div>` : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
+function getFilteredTasks() {
+  let filtered = [...tasks];
+  if (filterStatus !== 'all') filtered = filtered.filter(t => t.status === filterStatus);
+  if (filterPriority !== 'all') filtered = filtered.filter(t => t.priority === filterPriority);
+  if (searchQuery) filtered = filtered.filter(t => t.title.toLowerCase().includes(searchQuery.toLowerCase()) || (t.notes||'').toLowerCase().includes(searchQuery.toLowerCase()));
+  return filtered;
+}
+
+function renderHoy() {
+  const tk = todayKey();
+  const todayTasks = tasks.filter(t => t.deadline === tk && t.status !== 'Hecha');
+  const overdue = tasks.filter(t => t.deadline && t.deadline < tk && t.status !== 'Hecha');
+  const pending = tasks.filter(t => !t.deadline && t.status !== 'Hecha');
+
+  const doneToday = tasks.filter(t => t.deadline === tk && t.status === 'Hecha');
+  const dayName = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'][today.getDay()];
+  const totalPending = todayTasks.length + overdue.length;
+
+  let html = `<div class="today-header">
+    <div class="today-date">${dayName.charAt(0).toUpperCase()+dayName.slice(1)}, ${today.getDate()} de ${MONTHS_FULL[today.getMonth()]}</div>
+    <div class="today-summary">${totalPending === 0 ? '¡Todo al día!' : `${totalPending} tarea${totalPending!==1?'s':''} pendiente${totalPending!==1?'s':''}`}</div>
+    <div class="today-sub">${doneToday.length > 0 ? `${doneToday.length} completada${doneToday.length!==1?'s':''} hoy` : 'Empezá a marcar tareas como hechas'}</div>
+  </div>`;
+
+  if (overdue.length > 0) {
+    html += `<div class="section-head"><span>Vencidas</span><span class="section-count" style="color:var(--high)">${overdue.length}</span></div><div class="task-list">`;
+    overdue.forEach(t => { html += taskCardHTML(t); });
+    html += `</div>`;
+  }
+
+  if (todayTasks.length > 0) {
+    html += `<div class="section-head"><span>Para hoy</span><span class="section-count">${todayTasks.length}</span></div><div class="task-list">`;
+    todayTasks.forEach(t => { html += taskCardHTML(t); });
+    html += `</div>`;
+  }
+
+  if (pending.length > 0) {
+    html += `<div class="section-head"><span>Sin fecha</span><span class="section-count">${pending.length}</span></div><div class="task-list">`;
+    pending.slice(0, 5).forEach(t => { html += taskCardHTML(t); });
+    if (pending.length > 5) html += `<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px">+${pending.length-5} más en "Todas"</div>`;
+    html += `</div>`;
+  }
+
+  if (doneToday.length > 0) {
+    html += `<div class="section-head"><span>Completadas hoy</span><span class="section-count">${doneToday.length}</span></div><div class="task-list">`;
+    doneToday.forEach(t => { html += taskCardHTML(t); });
+    html += `</div>`;
+  }
+
+  if (totalPending === 0 && pending.length === 0) {
+    html += `<div class="empty-state"><i class="ti ti-circle-check"></i>No hay tareas pendientes.<br>Usá el botón + para agregar una.</div>`;
+  }
+  return html;
+}
+
+function renderTodas() {
+  const filtered = getFilteredTasks();
+  let html = ``;
+  if (searchOpen) {
+    html += `<div class="search-wrap"><i class="ti ti-search"></i><input class="search-input" id="search-input" placeholder="Buscar tareas..." value="${searchQuery}" oninput="onSearch(this.value)"></div>`;
+  }
+  html += `<div class="filter-row">
+    <button class="filter-chip${filterStatus==='all'?' active':''}" onclick="setFilter('status','all')">Todas</button>
+    <button class="filter-chip${filterStatus==='Pendiente'?' active':''}" onclick="setFilter('status','Pendiente')">Pendiente</button>
+    <button class="filter-chip${filterStatus==='En progreso'?' active':''}" onclick="setFilter('status','En progreso')">En progreso</button>
+    <button class="filter-chip${filterStatus==='Bloqueada'?' active':''}" onclick="setFilter('status','Bloqueada')">Bloqueada</button>
+    <button class="filter-chip${filterStatus==='Hecha'?' active':''}" onclick="setFilter('status','Hecha')">Hecha</button>
+    <button class="filter-chip${filterPriority==='Alta'?' active':''}" onclick="setFilter('priority','Alta')" style="${filterPriority==='Alta'?'background:var(--high-bg);color:var(--high);border-color:var(--high)':''}">🔴 Alta</button>
+    <button class="filter-chip${filterPriority==='Media'?' active':''}" onclick="setFilter('priority','Media')" style="${filterPriority==='Media'?'background:var(--med-bg);color:var(--med);border-color:var(--med)':''}">🟡 Media</button>
+    <button class="filter-chip${filterPriority==='Baja'?' active':''}" onclick="setFilter('priority','Baja')" style="${filterPriority==='Baja'?'background:var(--low-bg);color:var(--low);border-color:var(--low)':''}">🟢 Baja</button>
+  </div>`;
+
+  if (filtered.length === 0) return html + `<div class="empty-state"><i class="ti ti-checklist"></i>No hay tareas.<br>Usá el botón + para agregar.</div>`;
+
+  const byPriority = { Alta: [], Media: [], Baja: [], undefined: [] };
+  filtered.filter(t=>t.status!=='Hecha').forEach(t => { (byPriority[t.priority]||byPriority['undefined']).push(t); });
+  const done = filtered.filter(t=>t.status==='Hecha');
+
+  ['Alta','Media','Baja'].forEach(p => {
+    if (byPriority[p].length > 0) {
+      html += `<div class="section-head"><span>${p} prioridad</span><span class="section-count">${byPriority[p].length}</span></div><div class="task-list">`;
+      byPriority[p].forEach(t => { html += taskCardHTML(t); });
+      html += `</div>`;
+    }
+  });
+  if (done.length > 0) {
+    html += `<div class="section-head"><span>Completadas</span><span class="section-count">${done.length}</span></div><div class="task-list">`;
+    done.forEach(t => { html += taskCardHTML(t); });
+    html += `</div>`;
+  }
+  return html;
+}
+
+function renderProyectos() {
+  let html = `<div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+    <button class="filter-chip active" onclick="openNewProject(event)"><i class="ti ti-plus"></i> Nuevo proyecto</button>
+  </div>`;
+
+  if (projects.length === 0) return html + `<div class="empty-state"><i class="ti ti-folder"></i>Sin proyectos todavía.<br>Creá uno para organizar tus tareas.</div>`;
+
+  projects.forEach(proj => {
+    const projTasks = tasks.filter(t => t.project === proj.id);
+    const done = projTasks.filter(t => t.status === 'Hecha').length;
+    const pct = projTasks.length > 0 ? Math.round((done / projTasks.length) * 100) : 0;
+    const pending = projTasks.filter(t => t.status !== 'Hecha');
+    html += `<div class="project-card">
+      <div class="project-header" onclick="openEditProject('${proj.id}',event)">
+        <span class="project-dot" style="background:${proj.color}"></span>
+        <span class="project-name">${proj.name}</span>
+        <span class="project-stats">${done}/${projTasks.length}</span>
+      </div>
+      ${projTasks.length > 0 ? `<div class="project-progress"><div class="project-progress-bar" style="width:${pct}%;background:${proj.color}"></div></div>` : ''}
+      <div class="project-tasks">
+        ${pending.map(t => taskCardHTML(t, false)).join('')}
+        <button class="add-subtask-btn" onclick="openNewTask(event,'${proj.id}')"><i class="ti ti-plus"></i> Agregar tarea</button>
+      </div>
+    </div>`;
+  });
+  return html;
+}
+
+function renderCalendario() {
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const tasksByDate = {};
+  tasks.forEach(t => { if (t.deadline) { if (!tasksByDate[t.deadline]) tasksByDate[t.deadline] = []; tasksByDate[t.deadline].push(t); } });
+
+  let html = `<div class="cal-nav">
+    <button onclick="calPrev()"><i class="ti ti-chevron-left"></i></button>
+    <span>${MONTHS_FULL[calMonth]} ${calYear}</span>
+    <button onclick="calNext()"><i class="ti ti-chevron-right"></i></button>
+  </div><div class="cal-grid">`;
+  DAYS.forEach(d => { html += `<div class="cal-day-label">${d}</div>`; });
+  for (let i=0;i<firstDay;i++) html += `<div class="cal-cell empty"></div>`;
+  for (let d=1;d<=daysInMonth;d++) {
+    const dk = dateKey(calYear, calMonth, d);
+    const isToday = d===today.getDate()&&calMonth===today.getMonth()&&calYear===today.getFullYear();
+    const dayTasks = tasksByDate[dk] || [];
+    html += `<div class="cal-cell${isToday?' today':''}" onclick="openNewTaskDate('${dk}',event)">
+      <div class="cal-num">${d}</div>
+      ${dayTasks.slice(0,3).map(t=>{
+        const isDone = t.status==='Hecha';
+        const col = t.priority==='Alta'?'var(--high)':t.priority==='Media'?'var(--med)':'var(--low)';
+        return `<div class="cal-task-dot" style="background:${col}22;color:${col};opacity:${isDone?0.4:1}" onclick="openEditTask('${t.id}',event)"><span style="width:4px;height:4px;border-radius:50%;background:${col};flex-shrink:0"></span>${t.title.substring(0,8)}</div>`;
+      }).join('')}
+      ${dayTasks.length>3?`<div style="font-size:9px;color:var(--text3)">+${dayTasks.length-3}</div>`:''}
+    </div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
+function onSearch(v) { searchQuery = v; renderAll(); }
+function setFilter(type, val) {
+  if (type==='status') filterStatus = filterStatus===val?'all':val;
+  else filterPriority = filterPriority===val?'all':val;
+  renderAll();
+}
+function calPrev() { calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderAll(); }
+function calNext() { calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderAll(); }
+
+function renderAll() {
+  const titles = {hoy:'Hoy',todas:'Todas las tareas',proyectos:'Proyectos',calendario:'Calendario'};
+  document.getElementById('view-title').textContent = titles[currentView]||'Tareas';
+  const content = document.getElementById('content');
+  if (currentView==='hoy') content.innerHTML = renderHoy();
+  else if (currentView==='todas') content.innerHTML = renderTodas();
+  else if (currentView==='proyectos') content.innerHTML = renderProyectos();
+  else if (currentView==='calendario') content.innerHTML = renderCalendario();
+  if (searchOpen && currentView==='todas') {
+    const si = document.getElementById('search-input');
+    if (si) { si.focus(); si.setSelectionRange(si.value.length,si.value.length); }
+  }
+}
+
+// Task modal
+function openNewTask(e, projectId='', date='') {
+  e.stopPropagation();
+  editingTaskId = null;
+  showTaskModal({ title:'', project: projectId, status:'Pendiente', priority:'Media', deadline: date, notes:'', estimatedTime:'', recurring:'No' });
+}
+function openNewTaskDate(dk, e) { e.stopPropagation(); openNewTask(e, '', dk); }
+function openEditTask(id, e) {
+  e.stopPropagation();
+  const t = tasks.find(x=>x.id===id);
+  if(!t) return;
+  editingTaskId = id;
+  showTaskModal(t);
+}
+
+async function toggleDone(id, e) {
+  e.stopPropagation();
+  const t = tasks.find(x=>x.id===id);
+  if(!t) return;
+  t.status = t.status==='Hecha' ? 'Pendiente' : 'Hecha';
+  await saveTaskRemote(t);
+  try{localStorage.setItem('rhg_tasks_cache',JSON.stringify(tasks));}catch(ex){}
+  renderAll();
+}
+
+function projOpts(cur) {
+  let opts = `<option value="">Sin proyecto</option>`;
+  projects.forEach(p => { opts += `<option value="${p.id}"${p.id===cur?' selected':''}>${p.name}</option>`; });
+  return opts;
+}
+function selOpts(arr, cur) { return arr.map(v=>`<option${v===cur?' selected':''}>${v}</option>`).join(''); }
+
+function showTaskModal(data) {
+  document.getElementById('modal-body').innerHTML = `
+    <h3>${editingTaskId?'Editar tarea':'Nueva tarea'}</h3>
+    <div class="field"><label>Título</label><input type="text" id="t-title" value="${(data.title||'').replace(/"/g,'&quot;')}" placeholder="¿Qué hay que hacer?"></div>
+    <div class="row-2">
+      <div class="field"><label>Prioridad</label><select id="t-priority">${selOpts(PRIORITIES, data.priority||'Media')}</select></div>
+      <div class="field"><label>Estado</label><select id="t-status">${selOpts(STATUSES, data.status||'Pendiente')}</select></div>
+    </div>
+    <div class="row-2">
+      <div class="field"><label>Deadline</label><input type="date" id="t-deadline" value="${data.deadline||''}"></div>
+      <div class="field"><label>Tiempo estimado</label><select id="t-time"><option value="">—</option>${selOpts(TIME_OPTS, data.estimatedTime)}</select></div>
+    </div>
+    <div class="field"><label>Proyecto</label><select id="t-project">${projOpts(data.project)}</select></div>
+    <div class="field"><label>Recurrencia</label><select id="t-recurring">${selOpts(RECUR_OPTS, data.recurring||'No')}</select></div>
+    <div class="field"><label>Notas</label><textarea id="t-notes" placeholder="Contexto, links, detalles...">${data.notes||''}</textarea></div>
+    <div class="modal-actions">
+      ${editingTaskId?`<button class="btn-delete" onclick="deleteTask()"><i class="ti ti-trash"></i></button>`:''}
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-save" onclick="saveTask()">Guardar</button>
+    </div>`;
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('t-title')?.focus(),100);
+}
+
+async function saveTask() {
+  const title = document.getElementById('t-title').value.trim();
+  if (!title) return;
+  const taskData = {
+    title,
+    priority: document.getElementById('t-priority').value,
+    status: document.getElementById('t-status').value,
+    deadline: document.getElementById('t-deadline').value,
+    estimatedTime: document.getElementById('t-time').value,
+    project: document.getElementById('t-project').value,
+    recurring: document.getElementById('t-recurring').value,
+    notes: document.getElementById('t-notes').value,
+    createdAt: editingTaskId ? (tasks.find(t=>t.id===editingTaskId)?.createdAt||new Date().toISOString()) : new Date().toISOString()
+  };
+  if (editingTaskId) {
+    const i = tasks.findIndex(t=>t.id===editingTaskId);
+    if(i>=0) tasks[i] = {...tasks[i],...taskData};
+    await saveTaskRemote(tasks[i>=0?i:0]);
+  } else {
+    const nt = {id:uid(),...taskData};
+    tasks.push(nt);
+    await saveTaskRemote(nt);
+  }
+  try{localStorage.setItem('rhg_tasks_cache',JSON.stringify(tasks));}catch(e){}
+  closeModal(); renderAll();
+}
+
+async function deleteTask() {
+  if (!editingTaskId) return;
+  await deleteTaskRemote(editingTaskId);
+  tasks = tasks.filter(t=>t.id!==editingTaskId);
+  try{localStorage.setItem('rhg_tasks_cache',JSON.stringify(tasks));}catch(e){}
+  closeModal(); renderAll();
+}
+
+// Project modal
+function openNewProject(e) { e.stopPropagation(); editingProjectId=null; showProjectModal({name:'',color:PROJECT_COLORS[0]}); }
+function openEditProject(id, e) { e.stopPropagation(); editingProjectId=id; showProjectModal(projects.find(p=>p.id===id)||{}); }
+
+function showProjectModal(data) {
+  const colorDots = PROJECT_COLORS.map(c=>`<div class="proj-color-opt${c===data.color?' selected':''}" style="background:${c}" onclick="selectProjColor('${c}',this)"></div>`).join('');
+  document.getElementById('modal-body').innerHTML = `
+    <h3>${editingProjectId?'Editar proyecto':'Nuevo proyecto'}</h3>
+    <div class="field"><label>Nombre</label><input type="text" id="p-name" value="${(data.name||'').replace(/"/g,'&quot;')}" placeholder="Nombre del proyecto"></div>
+    <div class="field"><label>Color</label><div class="proj-color-row" id="color-row">${colorDots}</div></div>
+    <input type="hidden" id="p-color" value="${data.color||PROJECT_COLORS[0]}">
+    <div class="modal-actions">
+      ${editingProjectId?`<button class="btn-delete" onclick="deleteProject()"><i class="ti ti-trash"></i></button>`:''}
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-save" onclick="saveProject()">Guardar</button>
+    </div>`;
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('p-name')?.focus(),100);
+}
+
+function selectProjColor(color, el) {
+  document.querySelectorAll('.proj-color-opt').forEach(d=>d.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('p-color').value = color;
+}
+
+function saveProject() {
+  const name = document.getElementById('p-name').value.trim();
+  if (!name) return;
+  const color = document.getElementById('p-color').value;
+  if (editingProjectId) {
+    const i = projects.findIndex(p=>p.id===editingProjectId);
+    if(i>=0) projects[i] = {...projects[i], name, color};
+  } else {
+    projects.push({id:uid(), name, color});
+  }
+  saveProjects(); closeModal(); renderAll();
+}
+
+function deleteProject() {
+  if (!editingProjectId) return;
+  projects = projects.filter(p=>p.id!==editingProjectId);
+  tasks.forEach(t=>{ if(t.project===editingProjectId) t.project=''; });
+  saveProjects(); closeModal(); renderAll();
+}
+
+function closeModal() { document.getElementById('modal-overlay').classList.add('hidden'); }
+document.getElementById('modal-overlay').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
+
+// Voice input
+function setupVoice() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) { document.getElementById('fab-mic').style.display='none'; return; }
+  recognition = new SpeechRecognition();
+  recognition.lang = 'es-AR';
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.onresult = e => {
+    const transcript = e.results[0][0].transcript;
+    stopRecording();
+    editingTaskId = null;
+    showTaskModal({ title: transcript, status:'Pendiente', priority:'Media', deadline:'', notes:'', estimatedTime:'', recurring:'No', project:'' });
+  };
+  recognition.onerror = () => stopRecording();
+  recognition.onend = () => stopRecording();
+}
+
+function startRecording() {
+  if (!recognition) return;
+  isRecording = true;
+  document.getElementById('fab-mic').classList.add('recording');
+  document.getElementById('mic-icon').className = 'ti ti-microphone-off';
+  try { recognition.start(); } catch(e) {}
+}
+
+function stopRecording() {
+  isRecording = false;
+  document.getElementById('fab-mic').classList.remove('recording');
+  document.getElementById('mic-icon').className = 'ti ti-microphone';
+  try { recognition.stop(); } catch(e) {}
+}
+
+document.getElementById('fab-mic').addEventListener('click', () => {
+  if (isRecording) stopRecording();
+  else startRecording();
+});
+
+document.getElementById('fab-add').addEventListener('click', e => openNewTask(e));
+
+document.querySelectorAll('.nav-tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.nav-tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    currentView = t.dataset.view;
+    renderAll();
+  });
+});
+
+document.getElementById('search-toggle').addEventListener('click', () => {
+  searchOpen = !searchOpen;
+  if (!searchOpen) searchQuery = '';
+  if (currentView !== 'todas') {
+    currentView = 'todas';
+    document.querySelectorAll('.nav-tab').forEach(x=>x.classList.remove('active'));
+    document.querySelector('[data-view="todas"]').classList.add('active');
+  }
+  renderAll();
+});
+
+document.getElementById('theme-toggle').addEventListener('click', () => {
+  isLight = !isLight;
+  localStorage.setItem('rhg_tasks_theme', isLight?'light':'dark');
+  applyTheme();
+});
+
+applyTheme();
+setupVoice();
+loadTasks();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+}
+</script>
+</body>
+</html>
